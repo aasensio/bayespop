@@ -1,0 +1,9 @@
+*.mod
+*.o
+*.extract
+*.burnin
+*.rand.txt
+*.diag.txt
+mcmc
+*.fits
+*.input
