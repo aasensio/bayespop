@@ -120,6 +120,9 @@ contains
 			library%indi(i) = library%nDim - i + 1
 		enddo
 
+		allocate(library%vPos(library%nSpec))
+		allocate(library%dPos(library%nSpec))
+		allocate(library%spectrumCorners(galaxy%nPix,4))
 		allocate(library%ee(library%nDim,2**library%nDim))
 		allocate(library%wrk(library%nPixAdapted,2**library%nDim))
 		allocate(library%wrkJ(library%nPixAdapted,library%nDim,2**library%nDim))
@@ -147,6 +150,10 @@ contains
 
 		library%params(1,1:library%nVelocities) = library%velocity
 		library%params(2,1:library%nDispersions) = library%dispersion
+		
+		library%velocityDelta = library%velocity(2) - library%velocity(1)
+		library%dispersionDelta = library%dispersion(2) - library%dispersion(1)
+				
 		
 	end subroutine setProblem
 

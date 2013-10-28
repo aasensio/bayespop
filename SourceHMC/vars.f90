@@ -60,10 +60,10 @@ implicit none
 	type library_t
 		character(len=120) :: filename, name
 		integer :: nSpec, nPix, nPixAdapted, nModels, nDispersions, nVelocities, nDim
-		real(kind=8) :: velScale, fwhm
-		real(kind=8), pointer :: spec(:,:,:,:), lambda(:), spectrum(:), jacobian(:,:)
+		real(kind=8) :: velScale, fwhm, velocityDelta, dispersionDelta
+		real(kind=8), pointer :: spec(:,:,:,:), lambda(:), spectrum(:), jacobian(:,:), spectrumCorners(:,:)
 		real(kind=8), pointer :: age(:), metallicity(:), imfSlope(:), mgfe(:), velocity(:), dispersion(:), params(:,:), wrk(:,:), wrkJ(:,:,:)
-		integer, pointer :: indi(:), ee(:,:)
+		integer, pointer :: indi(:), ee(:,:), vPos(:), dPos(:)
 	end type library_t
 
 	type galaxy_t

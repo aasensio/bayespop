@@ -20,7 +20,7 @@ implicit none
 	
 
 ! Find the maximum a-posteriori values
-  		call getMaximumLikelihood
+!   		call getMaximumLikelihood
 
 ! Hamiltonian Metropolis
 		call hmcSample

@@ -3,7 +3,7 @@
 # Select compiler
 # Intel Fortran compiler
 COMPILER_F90 = ifort
-OPTIONS_F90 = -c -O3
+OPTIONS_F90 = -c -g -traceback
 # -g -traceback
 
 COMPILER_C = icc

@@ -45,6 +45,45 @@ contains
 	end subroutine linearInterpolation
 
 !-----------------------------------------------------------------------
+! Linear interpolation
+!-----------------------------------------------------------------------
+	subroutine linearInterpolation2D(velocityIn, dispersionIn, modelIndex)
+	real(kind=8) :: velocityIn, dispersionIn
+	integer :: modelIndex
+	real(kind=8) :: x1, x2, y1, y2
+				 	 		 		
+ 		x1 = library%velocity(library%vPos(modelIndex))
+		x2 = library%velocity(library%vPos(modelIndex)+1)
+		y1 = library%dispersion(library%dPos(modelIndex))
+		y2 = library%dispersion(library%dPos(modelIndex)+1)
+				
+		
+		library%spectrumCorners(:,1) = library%spec(:,modelIndex,library%vPos(modelIndex),library%dPos(modelIndex))
+		library%spectrumCorners(:,2) = library%spec(:,modelIndex,library%vPos(modelIndex)+1,library%dPos(modelIndex))
+		library%spectrumCorners(:,3) = library%spec(:,modelIndex,library%vPos(modelIndex),library%dPos(modelIndex)+1)
+		library%spectrumCorners(:,4) = library%spec(:,modelIndex,library%vPos(modelIndex)+1,library%dPos(modelIndex)+1)
+		
+		library%spectrum = &
+			(library%spectrumCorners(:,1) * (x2-velocityIn) * (y2-dispersionIn) + &
+			library%spectrumCorners(:,2) * (velocityIn-x1) * (y2-dispersionIn) + &
+			library%spectrumCorners(:,3) * (x2-velocityIn) * (dispersionIn-y1) + &
+			library%spectrumCorners(:,4) * (velocityIn-x1) * (dispersionIn-y1)) / ((x2-x1)*(y2-y1))
+ 		
+ 		library%jacobian(:,1) = &
+			(-library%spectrumCorners(:,1) * (y2-dispersionIn) + &
+			library%spectrumCorners(:,2) * (y2-dispersionIn) - &
+			library%spectrumCorners(:,3) * (dispersionIn-y1) + &
+			library%spectrumCorners(:,4) * (dispersionIn-y1)) / ((x2-x1)*(y2-y1))
+			
+		library%jacobian(:,2) = &
+			(-library%spectrumCorners(:,1) * (x2-velocityIn) - &
+			library%spectrumCorners(:,2) * (velocityIn-x1) + &
+			library%spectrumCorners(:,3) * (x2-velocityIn) + &
+			library%spectrumCorners(:,4) * (velocityIn-x1)) / ((x2-x1)*(y2-y1))
+			  		
+	end subroutine linearInterpolation2D
+
+!-----------------------------------------------------------------------
 ! Likelihood function
 !-----------------------------------------------------------------------
 	subroutine slikelihoodNoNormalization(trial,slhood,gradient,maxLikelihood)
@@ -141,13 +180,16 @@ contains
 		galaxy%synth = 0.d0		
 		galaxy%synthGrad = 0.d0
 		
+		library%vPos = floor(1+1.d0/library%velocityDelta * (galaxy%trialVelocity - library%velocity(1)))
+ 		library%dPos = floor(1+1.d0/library%dispersionDelta * (galaxy%trialDispersion - library%dispersion(1)))
+ 		 				
 ! Compute the kernel, do the convolution, add the component and compute the derivatives
 		do i = 1, library%nSpec
 
 			if (activeWeight(i) == 1) then
-								
-  				call linearInterpolation((/galaxy%trialVelocity(i),galaxy%trialDispersion(i)/), i)
-				
+								  				
+  				call linearInterpolation2D(galaxy%trialVelocity(i),galaxy%trialDispersion(i), i)
+  				  								
 				galaxy%synth = galaxy%synth + activeWeight(i) * galaxy%trialWeight(i) * library%spectrum
 				
 				galaxy%synthGrad(:,i) = library%spectrum
@@ -207,7 +249,7 @@ contains
 					
 ! Total posterior
 		slhood = logLikelihood + logPrior
-		
+						
 ! Save the parameters that give the best likelihood
 		if (slhood > maxslhood) then
 			map_pars = trial
