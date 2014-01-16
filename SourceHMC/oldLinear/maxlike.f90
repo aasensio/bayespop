@@ -29,12 +29,12 @@ contains
 				loop = loop + 1
 			endif
 		enddo
-				
+
 ! Estimate noise level : sigma = <spec> / SNR
 		galaxy%noise = (sum(galaxy%spec(galaxy%mask,galaxy%whichComputing)) / galaxy%nMask) / galaxy%snr
-		
+
 		allocate(x(sdim),l(sdim),u(sdim),g(sdim))
-		
+
 ! Boundaries
 		l = -20.d0
 		u = 20.d0
@@ -43,18 +43,17 @@ contains
 			x(i) = 1.d0 * f - 0.5d0
 		enddo
 		
-				
-! 		x = log((priorWeight%lower-1.d0/45.d0)/(1.d0/45.d0-priorWeight%upper))		
+! 		x = log((priorWeight%lower-1.d0/45.d0)/(1.d0/45.d0-priorWeight%upper))
 ! 		x(sdim-1) = log((priorVelocity%lower-0.d0)/(0.d0-priorVelocity%upper))
 ! 		x(sdim) = log((priorDispersion%lower-380.d0)/(380.d0-priorDispersion%upper))
-								
+				
 ! Test derivatives
-!  		do i = 1, sdim
-!  			x(i) = -2.d0 + 4.d0/sdim * i
-!  		enddo
+  		do i = 1, sdim
+  			x(i) = -2.d0 + 4.d0/sdim * i
+  		enddo
 !  				  		
 !   		allocate(x2(sdim),g2(sdim))
-!   		x2 = x
+!   		x2 = x  		
 !   		call slikelihoodNoNormalization(x,f,g,.TRUE.)
 !   		g2 = galaxy%synthGrad(galaxy%mask(100),:)
 !   		galaxy%synth2 = galaxy%synth
@@ -84,7 +83,7 @@ contains
 
 ! Compute the spectrum at the final value of the parameters
  		call slikelihoodNoNormalization(x,f,g,.TRUE.)
- 				
+		
 		galaxy%trial = x
 				
 		deallocate(x,l,u,g)
@@ -103,7 +102,7 @@ contains
 ! 			galaxy%trial(i) = sigmoid(galaxy%trial(i) + 1.d-5)
 ! 		enddo
 
-		open(unit=15,file='bestFitPars.dat',action='write',status='replace')
+		open(unit=15,file='bestFit.dat',action='write',status='replace')
   		if (galaxy%fixVLOS == 0) then
 			write(15,*) library%nSpec, library%nSpec, library%nSpec
 		else
@@ -112,8 +111,6 @@ contains
 		do i = 1, library%nSpec
 			write(15,*) galaxy%trialWeight(i), galaxy%trialVelocity(i) * library%velScale, galaxy%trialDispersion(i) * library%velScale
 		enddo
-		close(15)
-		open(unit=15,file='bestFitSpec.dat',action='write',status='replace')
 		write(15,*) size(galaxy%mask)
 		do i = 1, size(galaxy%mask)
 			write(15,*) galaxy%synth(galaxy%mask(i)), galaxy%spec(galaxy%mask(i),galaxy%whichComputing)

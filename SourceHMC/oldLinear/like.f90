@@ -1,10 +1,88 @@
 module like_m
 use params
-use maths, only : convolution, sigmoid, diffSigmoid
+use maths, only : convolution, sigmoid, diffSigmoid, hunt
 implicit none
       
 contains
-	
+
+!-----------------------------------------------------------------------
+! Linear interpolation
+!-----------------------------------------------------------------------
+	subroutine linearInterpolation(pars, modelIndex)
+	real(kind=8) :: pars(2), delta, deltaJ
+	integer :: modelIndex, i, j, ind, near(2), indices(2)
+			
+ 		call hunt(library%velocity, library%nVelocities, pars(1), near(1))
+ 		call hunt(library%dispersion, library%nDispersions, pars(2), near(2))
+ 								
+! Extract the values of the function that will be used
+		do i = 1, 2**library%nDim
+			indices = near + library%ee(:,i)			
+			library%wrk(:,i) = library%spec(:,modelIndex,indices(1),indices(2))
+  			do j = 1, library%nDim
+  				library%wrkJ(:,j,i) = library%spec(:,modelIndex,indices(1),indices(2))
+  			enddo
+		enddo
+		
+ 		library%jacobian = 0.d0
+! Do the actual linear interpolation
+		do i = 1, library%nDim
+			ind = library%indi(i)			
+			delta = -(pars(ind) - library%params(ind,near(ind))) / &
+				(library%params(ind,near(ind)) - library%params(ind,near(ind)+1))
+			deltaJ = -1.d0 / (library%params(ind,near(ind)) - library%params(ind,near(ind)+1))
+			
+			do j = 1, 2**(library%nDim-i)				
+				library%wrk(:,j) = (library%wrk(:,2*j) - library%wrk(:,2*j-1)) * delta + library%wrk(:,2*j-1)
+  				library%wrkJ(:,ind,j) = (library%wrkJ(:,ind,2*j) - library%wrkJ(:,ind,2*j-1)) * deltaJ
+			enddo
+			
+		enddo
+		
+ 		library%spectrum = library%wrk(:,1)
+  		library%jacobian = library%wrkJ(:,:,1)
+		
+	end subroutine linearInterpolation
+
+!-----------------------------------------------------------------------
+! Linear interpolation
+!-----------------------------------------------------------------------
+	subroutine linearInterpolation2D(velocityIn, dispersionIn, modelIndex)
+	real(kind=8) :: velocityIn, dispersionIn
+	integer :: modelIndex
+	real(kind=8) :: x1, x2, y1, y2
+				 	 		 		
+ 		x1 = library%velocity(library%vPos(modelIndex))
+		x2 = library%velocity(library%vPos(modelIndex)+1)
+		y1 = library%dispersion(library%dPos(modelIndex))
+		y2 = library%dispersion(library%dPos(modelIndex)+1)
+				
+		
+		library%spectrumCorners(:,1) = library%spec(:,modelIndex,library%vPos(modelIndex),library%dPos(modelIndex))
+		library%spectrumCorners(:,2) = library%spec(:,modelIndex,library%vPos(modelIndex)+1,library%dPos(modelIndex))
+		library%spectrumCorners(:,3) = library%spec(:,modelIndex,library%vPos(modelIndex),library%dPos(modelIndex)+1)
+		library%spectrumCorners(:,4) = library%spec(:,modelIndex,library%vPos(modelIndex)+1,library%dPos(modelIndex)+1)
+		
+		library%spectrum = &
+			(library%spectrumCorners(:,1) * (x2-velocityIn) * (y2-dispersionIn) + &
+			library%spectrumCorners(:,2) * (velocityIn-x1) * (y2-dispersionIn) + &
+			library%spectrumCorners(:,3) * (x2-velocityIn) * (dispersionIn-y1) + &
+			library%spectrumCorners(:,4) * (velocityIn-x1) * (dispersionIn-y1)) / ((x2-x1)*(y2-y1))
+ 		
+ 		library%jacobian(:,1) = &
+			(-library%spectrumCorners(:,1) * (y2-dispersionIn) + &
+			library%spectrumCorners(:,2) * (y2-dispersionIn) - &
+			library%spectrumCorners(:,3) * (dispersionIn-y1) + &
+			library%spectrumCorners(:,4) * (dispersionIn-y1)) / ((x2-x1)*(y2-y1))
+			
+		library%jacobian(:,2) = &
+			(-library%spectrumCorners(:,1) * (x2-velocityIn) - &
+			library%spectrumCorners(:,2) * (velocityIn-x1) + &
+			library%spectrumCorners(:,3) * (x2-velocityIn) + &
+			library%spectrumCorners(:,4) * (velocityIn-x1)) / ((x2-x1)*(y2-y1))
+			  		
+	end subroutine linearInterpolation2D
+
 !-----------------------------------------------------------------------
 ! Likelihood function
 !-----------------------------------------------------------------------
@@ -19,8 +97,10 @@ contains
 		gradient = 0.d0
 								
 ! ********* Prior for the weights
-		galaxy%trialWeight = sigmoid(trial(1:library%nSpec), 0.d0, 1.d0)
-				
+		galaxy%trialWeight = sigmoid(trial(1:library%nSpec), 0.d0, 1.d0)			
+		
+! 		print *, trial
+! 		stop
 
 !******************
 ! If we do not fix the LOS velocity of each component
@@ -37,7 +117,7 @@ contains
 			endif
 
 ! Dirac prior
-			if (priors(1)%typ == 2) then
+			if (priorVelocity%typ == 2) then
 				galaxy%trialVelocity = priors(1)%mu
 			endif
 			
@@ -88,100 +168,49 @@ contains
 				galaxy%trialDispersion = priors(2)%mu
 			endif
 					
-		endif								
+		endif									
 		
 ! If the weight of the component is smaller than 0.001, set its weight to zero
 		activeWeight = 1
-! 		if (sigmoidTransform) then
-! 			do i = 1, library%nSpec
-! 				if (galaxy%trialWeight(i) < 0.001d0) then
-! 					activeWeight(i) = 0
-! 					trial(i) = -50.d0
-! 					trial(i+library%nSpec) = 0.d0
-! 					trial(i+2*library%nSpec) = 200.d0
-! 				endif
-! 			enddo
-! 		endif
 
 ! **************************
 ! ********** DATA LIKELIHOOD
 ! **************************		
-				
-! Normalize the velocity and dispersion to a global scale
-		galaxy%trialDispersion = galaxy%trialDispersion / library%velScale
-		galaxy%trialVelocity = galaxy%trialVelocity / library%velScale
-
-		maxDispersion = maxval(galaxy%trialDispersion)
-
-! Find the number of pixels of the kernel
-		nPixKernel = 2*ceiling(4*maxDispersion)+1
-
-! Do something more efficient that allocating memory for each iteration
-		allocate(galaxy%xKernel(nPixKernel))
-		allocate(galaxy%yKernel(nPixKernel))		
-		allocate(galaxy%yKernelDerivative(nPixKernel))
-		
+						
 		galaxy%synth = 0.d0		
 		galaxy%synthGrad = 0.d0
-		midPix = nPixKernel / 2
 		
+		library%vPos = floor(1+1.d0/library%velocityDelta * (galaxy%trialVelocity - library%velocity(1)))
+ 		library%dPos = floor(1+1.d0/library%dispersionDelta * (galaxy%trialDispersion - library%dispersion(1)))
+ 		 				
 ! Compute the kernel, do the convolution, add the component and compute the derivatives
 		do i = 1, library%nSpec
 
 			if (activeWeight(i) == 1) then
-				do j = 1, nPixKernel
-					galaxy%xKernel(j) = (j-1 - (midPix+galaxy%trialVelocity(i))) / galaxy%trialDispersion(i)
-				enddo
-				galaxy%yKernel = exp(-0.5d0*galaxy%xKernel**2)
-				sumKernel = sum(galaxy%yKernel)				
+								  				
+  				call linearInterpolation2D(galaxy%trialVelocity(i),galaxy%trialDispersion(i), i)
+  				  								
+				galaxy%synth = galaxy%synth + activeWeight(i) * galaxy%trialWeight(i) * library%spectrum
+				
+				galaxy%synthGrad(:,i) = library%spectrum
 
-				galaxy%convolvedSpectrum = convolution(library%specAdapted(:,i), galaxy%yKernel / sumKernel)
-				galaxy%synth = galaxy%synth + activeWeight(i) * galaxy%trialWeight(i) * galaxy%convolvedSpectrum
-												
-
-! Term used to compute the derivatives with respect to the weights
-				galaxy%synthGrad(:,i) = galaxy%convolvedSpectrum
-
+! Every component has different kinematics
 				if (galaxy%fixVLOS == 0) then
 
-! Term used to compute the derivatives with respect to the velocities
-					galaxy%yKernelDerivative = -(-galaxy%xKernel / galaxy%trialDispersion(i) * galaxy%yKernel * sumKernel - galaxy%yKernel * &
-						sum(-galaxy%xKernel / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
-
-					galaxy%synthGrad(:,i+library%nSpec) = activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
-
-! Term used to compute the derivatives with respect to the dispersion
-					galaxy%yKernelDerivative = (galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel * sumKernel - galaxy%yKernel * &
-						sum(galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
-
-					galaxy%synthGrad(:,i+2*library%nSpec) = activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
+					galaxy%synthGrad(:,i+library%nSpec) = activeWeight(i) * galaxy%trialWeight(i) * library%jacobian(:,1)
+					galaxy%synthGrad(:,i+2*library%nSpec) = activeWeight(i) * galaxy%trialWeight(i) * library%jacobian(:,2)
 																
 				else
-! Compute the derivative of the kernel 
-					galaxy%yKernelDerivative = -(-galaxy%xKernel / galaxy%trialDispersion(i) * galaxy%yKernel * sumKernel - galaxy%yKernel * &
-						sum(-galaxy%xKernel / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
 							
-					galaxy%synthGrad(:,1+library%nSpec) = galaxy%synthGrad(:,1+library%nSpec) + activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
-
-! Term used to compute the derivatives with respect to the dispersion
-					galaxy%yKernelDerivative = (galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel * sumKernel - galaxy%yKernel * &
-						sum(galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
+					galaxy%synthGrad(:,1+library%nSpec) = galaxy%synthGrad(:,1+library%nSpec) + activeWeight(i) * galaxy%trialWeight(i) * library%jacobian(:,1)
+					galaxy%synthGrad(:,2+library%nSpec) = galaxy%synthGrad(:,2+library%nSpec) + activeWeight(i) * galaxy%trialWeight(i) * library%jacobian(:,2)
 					
-					galaxy%synthGrad(:,2+library%nSpec) = galaxy%synthGrad(:,2+library%nSpec) + activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
 				endif
 												
 			endif
 			
 		enddo
-							
-		deallocate(galaxy%xKernel)
-		deallocate(galaxy%yKernel)
-		deallocate(galaxy%yKernelDerivative)
-		
+									
 ! Compute the log-likelihood
 		logLikelihood = -0.5d0 * sum( (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask,galaxy%whichComputing))**2 / galaxy%noise**2 )
 		
@@ -220,7 +249,7 @@ contains
 					
 ! Total posterior
 		slhood = logLikelihood + logPrior
-		
+						
 ! Save the parameters that give the best likelihood
 		if (slhood > maxslhood) then
 			map_pars = trial

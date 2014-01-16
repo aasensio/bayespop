@@ -21,6 +21,7 @@ meshgrid, vel_range, sig_range, vellist, siglist
 vellist = reform(vellist, n_elements(vellist))
 siglist = reform(siglist, n_elements(siglist))
 ncases  = n_elements(vellist)
+ncases = 1
 
 ;# Adapting the library
 adapted_library = {spec:dblarr(data.npix,library.nspec*ncases), lambda:dblarr(data.npix,library.nspec*ncases), $

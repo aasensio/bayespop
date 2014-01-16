@@ -23,7 +23,6 @@ contains
 		
 		allocate(xvar(n), fvec(M), fjac(M,N), dtd(n,n))
 		
-				
 		analytic_jac = .TRUE.
 		analytic_Avv = .FALSE.
 		center_diff = .FALSE.
@@ -45,7 +44,6 @@ contains
 		xtol = 1.d-18
 		xrtol = 1.d-18
 		frtol = 1.d-18
-		ftol = 1.d-15
 		print_level = 3
 		print_unit = 6
 		imethod = 0
@@ -57,7 +55,7 @@ contains
 		ibroyden = 0
 		
 		iaccel = 1
-	 	ibold = 1     ! Type of acceptance
+	! 	ibold = 1     ! Type of acceptance
 		
 		call geolevmar(func, jacobian, Avv, xvar, fvec, fjac, n, m, callback, info,&
 					analytic_jac, analytic_Avv, center_diff, eps, h1, h2,&
@@ -79,7 +77,7 @@ contains
 	integer :: m, n
 	real(kind=8) :: x(n), fvec(m), f, g(n)
 				
- 		call slikelihoodNoNormalization(x,f,g,.TRUE.) 		
+		call slikelihoodNoNormalization(x,f,g,.TRUE.)
 		
 		fvec = (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask,galaxy%whichComputing)) / galaxy%noise			
 									

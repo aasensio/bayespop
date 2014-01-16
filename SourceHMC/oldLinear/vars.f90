@@ -59,25 +59,27 @@ implicit none
 
 	type library_t
 		character(len=120) :: filename, name
-		integer :: nSpec, nPix, nPixAdapted
-		real(kind=8) :: velScale, fwhm
-		real(kind=8), pointer :: age(:), metallicity(:), imfSlope(:), mgfe(:)
-		real(kind=8), pointer :: spec(:,:), specAdapted(:,:), lambda(:)
+		integer :: nSpec, nPix, nPixAdapted, nModels, nDispersions, nVelocities, nDim
+		real(kind=8) :: velScale, fwhm, velocityDelta, dispersionDelta
+		real(kind=8), pointer :: spec(:,:,:,:), lambda(:), spectrum(:), jacobian(:,:), spectrumCorners(:,:)
+		real(kind=8), pointer :: age(:), metallicity(:), imfSlope(:), mgfe(:), velocity(:), dispersion(:), params(:,:), wrk(:,:), wrkJ(:,:,:)
+		integer, pointer :: indi(:), ee(:,:), vPos(:), dPos(:)
 	end type library_t
 
 	type galaxy_t
 		character(len=120) :: filename
 		integer :: nPix, nMask, nSpec, whichComputing, fixVLOS
 		real(kind=8) :: snr, noise, velScale
-		real(kind=8), pointer :: spec(:,:), synth(:), xKernel(:), yKernel(:), lambda(:), synthGrad(:,:), convolvedSpectrum(:), synth2(:)
-		real(kind=8), pointer :: trialWeight(:), trialVelocity(:), trialDispersion(:), yKernelDerivative(:), trial(:)
+		real(kind=8), pointer :: spec(:,:), synth(:), lambda(:), synthGrad(:,:), convolvedSpectrum(:), synth2(:)
+		real(kind=8), pointer :: trialWeight(:), trialVelocity(:), trialDispersion(:), trial(:)
 		integer, pointer :: maskIndex(:,:), mask(:)
 	end type galaxy_t
 
 	type(markov_t) :: chain_analysis
+	type(prior_t) :: priorWeight, priorVelocity, priorDispersion
 	type(prior_t), pointer :: priors(:)
 	
-	character(len=11) :: variableNames(6)=(/'Velocity   ','Dispersion ','Age        ','Metallicity','IMF Slope  ','MGFE       '/)
+	character(len=11) :: variableNames(6)=(/'Velocity','Dispersion','Age','Metallicity','IMF Slope','MGFE'/)
 
 	type(library_t) :: library
 	type(galaxy_t) :: galaxy

@@ -39,8 +39,6 @@ contains
 ! These values are obtained 
 		st = galaxy%trial
 		
-		call testDerivatives(st)
-		
 ! Size of the steps and initial conditions
 ! Transform from the initial conditions to the sigmoid functions
 
@@ -120,19 +118,19 @@ contains
    real(kind=8) :: v
 	integer i	
 		
-	do i=1,ndim-1		
-		if (i <= library%nSpec) then
-			write(20,'(E18.10,a)',advance='no') sigmoid(x(i), 0.d0, 1.d0) !1.d0/(1.d0+exp(-x(i))), ' '
-		else
-			write(20,'(E18.10,a)',advance='no') x(i), ' '
-		endif
-	enddo
+		do i=1,ndim-1		
+			if (i <= library%nSpec) then
+				write(20,'(E18.10,a)',advance='no') sigmoid(x(i), priorWeight%lower, priorWeight%upper) !1.d0/(1.d0+exp(-x(i))), ' '
+			else
+				write(20,'(E18.10,a)',advance='no') x(i), ' '
+			endif
+		enddo
+			
+		write(20,'(E18.10)') x(ndim)
 		
-	write(20,'(E18.10)') x(ndim)
-	
-	write(21,*) galaxy%synth(galaxy%mask)
+		write(21,*) galaxy%synth(galaxy%mask)
 
-end subroutine writeHMCProcess
+	end subroutine writeHMCProcess
 
 !------------------------------------------------------------------
 ! Test derivatives
@@ -152,6 +150,7 @@ end subroutine writeHMCProcess
 			print *, logPGradient(i), (logPNew-logP) / 1.d-5			
 		enddo
 	end subroutine testDerivatives
+
 
 
 end module sampling_m

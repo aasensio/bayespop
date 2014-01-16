@@ -39,7 +39,7 @@ FOR i=0, conffile.nfiles-1 DO BEGIN
     library  = load_library(galaxy)
 
     ;## Reading the priors conffile
-    print, '# Loading the priors file: '+galaxy.priorfile
+    print, '# Loading the priors file: '+galaxy.priorfile    
     priors = load_priors(galaxy,library)
 
     ;## Adapting the library models to the data
@@ -82,25 +82,22 @@ FOR i=0, conffile.nfiles-1 DO BEGIN
       ; Model's related parameters
       WRITEU, unit, 1L*models.npix
       WRITEU, unit, 1L*models.nspec
-      WRITEU, unit, 1L*models.nvelocity
-      WRITEU, unit, 1L*models.ndispersion
       WRITEU, unit, 1.d0*models.velscale
       WRITEU, unit, 1.d0*models.spec
       WRITEU, unit, 1.d0*models.age
       WRITEU, unit, 1.d0*models.met
       WRITEU, unit, 1.d0*models.imf_slope
       WRITEU, unit, 1.d0*models.mgfe
-      WRITEU, unit, 1.d0*models.velocity
-      WRITEU, unit, 1.d0*models.dispersion
 
       ; Data's related parameters
       WRITEU, unit, 1.d0*galaxy.snr
       WRITEU, unit, 1L*galaxy.nspec
       WRITEU, unit, 1.d0*galaxy.spec
       WRITEU, unit, 1L*mask
-      WRITEU, unit, 1L*galaxy.fix_losvd
+      WRITEU, unit, 1L*galaxy.fix_losvd            
 
    CLOSE, unit
+   stop
    FREE_LUN, unit
    print, ' '
    print, '# Preprocessed file '+outfile+' written on disk'

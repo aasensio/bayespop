@@ -10,7 +10,7 @@ contains
 ! Read the problem configuration
 !-----------------------------------------------------------------
 	subroutine setProblem
-	integer :: i, j
+	integer :: i, j, ndim, nmax, c1, c2, nr, k
 	real(kind=8) :: l0, par(2)
 
 		open(unit=12,file='internalConf.input',action='read',status='old',form='unformatted')		
@@ -46,39 +46,45 @@ contains
 		do i = 1, 6
 			print *, variableNames(i), priors(i)%lower, priors(i)%upper
 		enddo
-						
+								
 		read(12) library%nPixAdapted
 		read(12) library%nSpec
+		read(12) library%nVelocities
+		read(12) library%nDispersions
 		read(12) library%velScale
-		
+								
 		galaxy%nPix = library%nPixAdapted
 		
-		allocate(library%specAdapted(library%nPixAdapted,library%nSpec))
+		allocate(library%spec(library%nPixAdapted,library%nSpec,library%nVelocities,library%nDispersions))
 		allocate(library%age(library%nSpec))
 		allocate(library%metallicity(library%nSpec))
 		allocate(library%imfSlope(library%nSpec))
 		allocate(library%mgfe(library%nSpec))
+		allocate(library%velocity(library%nVelocities))
+		allocate(library%dispersion(library%nDispersions))
 		
-		read(12) library%specAdapted
+		read(12) library%spec
+				
 		read(12) library%age
 		read(12) library%metallicity
 		read(12) library%imfSlope
 		read(12) library%mgfe
-				
-		read(12) galaxy%snr
+		read(12) library%velocity
+		read(12) library%dispersion
+								
+		read(12) galaxy%snr		
 		read(12) galaxy%nSpec
 		
 		allocate(galaxy%spec(galaxy%nPix,galaxy%nSpec))
 		allocate(galaxy%maskIndex(galaxy%nPix,galaxy%nSpec))
 		allocate(galaxy%synth(galaxy%nPix))
 		allocate(galaxy%synth2(galaxy%nPix))
-		allocate(galaxy%convolvedSpectrum(galaxy%nPix))
 				
-		read(12) galaxy%spec						
-		read(12) galaxy%maskIndex		
-		read(12) galaxy%fixVLOS				
+		read(12) galaxy%spec
+		read(12) galaxy%maskIndex
+		read(12) galaxy%fixVLOS
 				
-		close(12)		
+		close(12)
 
 ! Fix all velocities to a common value
 		if (galaxy%fixVLOS == 0) then
@@ -90,6 +96,7 @@ contains
 		nest_nPar = sdim
 
 ! Allocate memory for gradient of spectrum used in the calculation of the derivative of the log-posterior
+		allocate(galaxy%convolvedSpectrum(galaxy%nPix))
 		allocate(galaxy%synthGrad(galaxy%nPix,sdim))
 
 		allocate(map_pars(sdim))		
@@ -101,11 +108,53 @@ contains
 		allocate(galaxy%trialWeight(library%nSpec))
 		allocate(galaxy%trialVelocity(library%nSpec))
 		allocate(galaxy%trialDispersion(library%nSpec))
-				
+						
 		allocate(galaxy%trial(sdim))
 
 		maxslhood = -1.d100
+		
+! Initialize the interpolation routines		
+		library%nDim = 2
+		allocate(library%indi(library%nDim))
+		do i = 1, library%nDim
+			library%indi(i) = library%nDim - i + 1
+		enddo
+
+		allocate(library%vPos(library%nSpec))
+		allocate(library%dPos(library%nSpec))
+		allocate(library%spectrumCorners(galaxy%nPix,4))
+		allocate(library%ee(library%nDim,2**library%nDim))
+		allocate(library%wrk(library%nPixAdapted,2**library%nDim))
+		allocate(library%wrkJ(library%nPixAdapted,library%nDim,2**library%nDim))
+		allocate(library%spectrum(library%nPixAdapted))
+		allocate(library%jacobian(library%nPixAdapted,2))
+		
+		do i = 1, library%nDim
+			nr = 2**(i-1)
+			c1 = 1
+			do j = 1, nr
+				c2 = 1
+				do k = 1, 2**library%nDim/nr
+					library%ee(library%nDim-library%indi(i)+1,c1) = (c2-1) / 2**(library%nDim-i)
+					c1 = c1 + 1
+					c2 = c2 + 1
+				enddo
+			enddo
+		enddo
+
+! Make array of parameters
+		nmax = maxval( (/library%nVelocities,library%nDispersions/) )
+		allocate(library%params(library%nDim,nmax))
+
+		library%params = 1.d10
+
+		library%params(1,1:library%nVelocities) = library%velocity
+		library%params(2,1:library%nDispersions) = library%dispersion
+		
+		library%velocityDelta = library%velocity(2) - library%velocity(1)
+		library%dispersionDelta = library%dispersion(2) - library%dispersion(1)
 				
+		
 	end subroutine setProblem
 
 ! The following routines might be part of the code in the future, when it
