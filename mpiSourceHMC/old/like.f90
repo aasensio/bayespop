@@ -10,57 +10,60 @@ contains
 !-----------------------------------------------------------------------
 	subroutine slikelihoodNoNormalization(trial,slhood,gradient,maxLikelihood)
 	logical :: maxLikelihood
-	real(kind=8) :: trial(:), slhood, logPrior, logLikelihood, gradient(sdim), gradJac(sdim), lnJac
+	real(kind=8) :: trial(:), slhood, logPrior, logLikelihood, gradient(sdim)
 	real(kind=8) :: temp(sdim),dist,loclik, sigma, xi, L, maxDispersion, sumKernel, covar(sdim,sdim), sumKernel2
 	integer :: i,j, nPixKernel, midPix, activeWeight(library%nSpec)
 
 ! Take also into account the priors
 		logPrior = 0.d0
 		gradient = 0.d0
-		lnJac = 0.d0
-		gradJac = 0.d0
-								
-! ********* Prior for the weights, including the Jacobian of the transformation and its gradient
-		logJac = sum(lnJacSigmoid(trial(1:library%nSpec), 0.d0, 1.d0))
-		logJacGradient(1:library%nSpec) = difflnJacSigmoid(trial(1:library%nSpec), 0.d0, 1.d0)		
-		galaxy%trialWeight = sigmoid(trial(1:library%nSpec), 0.d0, 1.d0)
-				
+						
+! ********* Prior for the weights
+		galaxy%trialWeight = sigmoid(trial(1:library%nSpec), priorWeight%lower, priorWeight%upper)
+		
+! Gaussian prior
+		if (priorWeight%typ == 1) then
+			logPrior = logPrior - sum((galaxy%trialWeight - priorWeight%mu)**2 / (2.d0*priorWeight%sigma**2))
+			gradient(1:library%nSpec) = gradient(1:library%nSpec) - (galaxy%trialWeight - priorWeight%mu) / priorWeight%sigma**2
+		endif
+
+! Dirac prior
+		if (priorWeight%typ == 2) then
+			galaxy%trialWeight = priorWeight%mu
+		endif
+		
 
 !******************
 ! If we do not fix the LOS velocity of each component
 !******************
 		if (galaxy%fixVLOS == 0) then
 
-! ********* Prior for the velocity and their corresponding Jacobian for the change of variables
-			logJac = sum(lnJacSigmoid(trial(library%nSpec+1:2*library%nSpec), priors(1)%lower, priors(1)%upper))
-			logJacGradient(library%nSpec+1:2*library%nSpec) = difflnJacSigmoid(trial(library%nSpec+1:2*library%nSpec), priors(1)%lower, priors(1)%upper)			
-			galaxy%trialVelocity = sigmoid(trial(library%nSpec+1:2*library%nSpec), priors(1)%lower, priors(1)%upper)
+! ********* Prior for the velocity
+			galaxy%trialVelocity = sigmoid(trial(library%nSpec+1:2*library%nSpec), priorVelocity%lower, priorVelocity%upper)
 
 ! Gaussian prior
-			if (priors(1)%typ == 1) then
-				logPrior = logPrior - sum((galaxy%trialVelocity - priors(1)%mu)**2 / (2.d0*priors(1)%sigma**2))
-				gradient(library%nSpec+1:2*library%nSpec) = gradient(library%nSpec+1:2*library%nSpec) - (galaxy%trialVelocity - priors(1)%mu) / priors(1)%sigma**2
+			if (priorVelocity%typ == 1) then
+				logPrior = logPrior - sum((galaxy%trialVelocity - priorVelocity%mu)**2 / (2.d0*priorVelocity%sigma**2))
+				gradient(library%nSpec+1:2*library%nSpec) = gradient(library%nSpec+1:2*library%nSpec) - (galaxy%trialVelocity - priorVelocity%mu) / priorVelocity%sigma**2
 			endif
 
 ! Dirac prior
-			if (priors(1)%typ == 2) then
-				galaxy%trialVelocity = priors(1)%mu
+			if (priorVelocity%typ == 2) then
+				galaxy%trialVelocity = priorVelocity%mu
 			endif
 			
-! ********* Prior for the dispersion and their corresponding Jacobian for the change of variables
-			logJac = sum(lnJacSigmoid(trial(2*library%nSpec+1:3*library%nSpec), priors(2)%lower, priors(2)%upper))
-			logJacGradient(2*library%nSpec+1:3*library%nSpec) = difflnJacSigmoid(trial(2*library%nSpec+1:3*library%nSpec), priors(2)%lower, priors(2)%upper)
-			galaxy%trialDispersion = sigmoid(trial(2*library%nSpec+1:3*library%nSpec), priors(2)%lower, priors(2)%upper)
+! ********* Prior for the dispersion
+			galaxy%trialDispersion = sigmoid(trial(2*library%nSpec+1:3*library%nSpec), priorDispersion%lower, priorDispersion%upper)
 
 ! Gaussian prior
-			if (priors(2)%typ == 1) then
-				logPrior = logPrior - sum((galaxy%trialDispersion - priors(2)%mu)**2 / (2.d0*priors(2)%sigma**2))
-				gradient(2*library%nSpec+1:3*library%nSpec) = gradient(2*library%nSpec+1:3*library%nSpec) - (galaxy%trialDispersion - priors(2)%mu) / priors(2)%sigma**2
+			if (priorDispersion%typ == 1) then
+				logPrior = logPrior - sum((galaxy%trialDispersion - priorDispersion%mu)**2 / (2.d0*priorDispersion%sigma**2))
+				gradient(2*library%nSpec+1:3*library%nSpec) = gradient(2*library%nSpec+1:3*library%nSpec) - (galaxy%trialDispersion - priorDispersion%mu) / priorDispersion%sigma**2
 			endif
 
 ! Dirac prior
-			if (priors(2)%typ == 2) then
-				galaxy%trialDispersion = priors(2)%mu
+			if (priorDispersion%typ == 2) then
+				galaxy%trialDispersion = priorDispersion%mu
 			endif
 			
 		else
@@ -68,39 +71,35 @@ contains
 !******************
 ! If we fix the LOS velocity of each component, fill all the trialVelocity array with the same value
 !******************			
-! ********* Prior for the velocity and their corresponding Jacobian for the change of variables
-			logJac = sum(lnJacSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper))
-			logJacGradient(library%nSpec+1) = difflnJacSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
-			galaxy%trialVelocity = sigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
+! ********* Prior for the velocity
+			galaxy%trialVelocity = sigmoid(trial(library%nSpec+1), priorVelocity%lower, priorVelocity%upper)
 
 ! Gaussian prior
-			if (priors(1)%typ == 1) then
-				logPrior = logPrior - (galaxy%trialVelocity(1) - priors(1)%mu)**2 / (2.d0*priors(1)%sigma**2)
-				gradient(library%nSpec+1) = gradient(library%nSpec+1) - (galaxy%trialVelocity(1) - priors(1)%mu) / priors(1)%sigma**2
+			if (priorVelocity%typ == 1) then
+				logPrior = logPrior - (galaxy%trialVelocity(1) - priorVelocity%mu)**2 / (2.d0*priorVelocity%sigma**2)
+				gradient(library%nSpec+1) = gradient(library%nSpec+1) - (galaxy%trialVelocity(1) - priorVelocity%mu) / priorVelocity%sigma**2
 			endif
 
 ! Dirac prior
-			if (priors(1)%typ == 2) then
-				galaxy%trialVelocity = priors(1)%mu
+			if (priorVelocity%typ == 2) then
+				galaxy%trialVelocity = priorVelocity%mu
 			endif
 			
-! ********* Prior for the dispersion and their corresponding Jacobian for the change of variables
-			logJac = sum(lnJacSigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper))
-			logJacGradient(library%nSpec+2) = difflnJacSigmoid(trial(library%nSpec+2c), priors(2)%lower, priors(2)%upper)
-			galaxy%trialDispersion = sigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper)
+! ********* Prior for the dispersion
+			galaxy%trialDispersion = sigmoid(trial(library%nSpec+2), priorDispersion%lower, priorDispersion%upper)
 					
 ! Gaussian prior
-			if (priors(2)%typ == 1) then
-				logPrior = logPrior - (galaxy%trialDispersion(1) - priors(2)%mu)**2 / (2.d0*priors(2)%sigma**2)
-				gradient(library%nSpec+2) = gradient(library%nSpec+2) - (galaxy%trialDispersion(1) - priors(2)%mu) / priors(2)%sigma**2
+			if (priorDispersion%typ == 1) then
+				logPrior = logPrior - (galaxy%trialDispersion(1) - priorDispersion%mu)**2 / (2.d0*priorDispersion%sigma**2)
+				gradient(library%nSpec+2) = gradient(library%nSpec+2) - (galaxy%trialDispersion(1) - priorDispersion%mu) / priorDispersion%sigma**2
 			endif
 
 ! Dirac prior
-			if (priors(2)%typ == 2) then
-				galaxy%trialDispersion = priors(2)%mu
+			if (priorDispersion%typ == 2) then
+				galaxy%trialDispersion = priorDispersion%mu
 			endif
 					
-		endif								
+		endif									
 		
 ! If the weight of the component is smaller than 0.001, set its weight to zero
 		activeWeight = 1
@@ -205,34 +204,33 @@ contains
 				
 ! Multiply by the derivative of the sigmoid
 		if (galaxy%fixVLOS == 0) then			
-			gradient(1:library%nSpec) = gradient(1:library%nSpec) * diffSigmoid(trial(1:library%nSpec), 0.d0, 1.d0)
-			gradient(library%nSpec+1:2*library%nSpec) = gradient(library%nSpec+1:2*library%nSpec) * diffSigmoid(trial(library%nSpec+1:2*library%nSpec), priors(1)%lower, priors(1)%upper)
-			gradient(2*library%nSpec+1:3*library%nSpec) = gradient(2*library%nSpec+1:3*library%nSpec) * diffSigmoid(trial(2*library%nSpec+1:3*library%nSpec), priors(2)%lower, priors(2)%upper)
+			gradient(1:library%nSpec) = gradient(1:library%nSpec) * diffSigmoid(trial(1:library%nSpec), priorWeight%lower, priorWeight%upper)
+			gradient(library%nSpec+1:2*library%nSpec) = gradient(library%nSpec+1:2*library%nSpec) * diffSigmoid(trial(library%nSpec+1:2*library%nSpec), priorVelocity%lower, priorVelocity%upper)
+			gradient(2*library%nSpec+1:3*library%nSpec) = gradient(2*library%nSpec+1:3*library%nSpec) * diffSigmoid(trial(2*library%nSpec+1:3*library%nSpec), priorDispersion%lower, priorDispersion%upper)
 			
 			if (maxLikelihood) then
 				do i = 1, library%nSpec
-					galaxy%synthGrad(:,i) = galaxy%synthGrad(:,i) * diffSigmoid(trial(i), 0.d0, 1.d0)
-					galaxy%synthGrad(:,i+library%nSpec) = galaxy%synthGrad(:,i+library%nSpec) * diffSigmoid(trial(i+library%nSpec), priors(1)%lower, priors(1)%upper)
-					galaxy%synthGrad(:,i+2*library%nSpec) = galaxy%synthGrad(:,i+2*library%nSpec) * diffSigmoid(trial(i+2*library%nSpec), priors(2)%lower, priors(2)%upper)
+					galaxy%synthGrad(:,i) = galaxy%synthGrad(:,i) * diffSigmoid(trial(i), priorWeight%lower, priorWeight%upper)
+					galaxy%synthGrad(:,i+library%nSpec) = galaxy%synthGrad(:,i+library%nSpec) * diffSigmoid(trial(i+library%nSpec), priorVelocity%lower, priorVelocity%upper)
+					galaxy%synthGrad(:,i+2*library%nSpec) = galaxy%synthGrad(:,i+2*library%nSpec) * diffSigmoid(trial(i+2*library%nSpec), priorDispersion%lower, priorDispersion%upper)
 				enddo
 			endif
 		else
-			gradient(1:library%nSpec) = gradient(1:library%nSpec) * diffSigmoid(trial(1:library%nSpec), 0.d0, 1.d0)
-			gradient(library%nSpec+1) = gradient(library%nSpec+1) * diffSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
-			gradient(library%nSpec+2) = gradient(library%nSpec+2) * diffSigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper)
+			gradient(1:library%nSpec) = gradient(1:library%nSpec) * diffSigmoid(trial(1:library%nSpec), priorWeight%lower, priorWeight%upper)
+			gradient(library%nSpec+1) = gradient(library%nSpec+1) * diffSigmoid(trial(library%nSpec+1), priorVelocity%lower, priorVelocity%upper)
+			gradient(library%nSpec+2) = gradient(library%nSpec+2) * diffSigmoid(trial(library%nSpec+2), priorDispersion%lower, priorDispersion%upper)
 			
 			if (maxLikelihood) then
 				do i = 1, library%nSpec
-					galaxy%synthGrad(:,i) = galaxy%synthGrad(:,i) * diffSigmoid(trial(i), 0.d0, 1.d0)
+					galaxy%synthGrad(:,i) = galaxy%synthGrad(:,i) * diffSigmoid(trial(i), priorWeight%lower, priorWeight%upper)
 				enddo
-				galaxy%synthGrad(:,library%nSpec+1) = galaxy%synthGrad(:,library%nSpec+1) * diffSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
-				galaxy%synthGrad(:,library%nSpec+2) = galaxy%synthGrad(:,library%nSpec+2) * diffSigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper)
+				galaxy%synthGrad(:,library%nSpec+1) = galaxy%synthGrad(:,library%nSpec+1) * diffSigmoid(trial(library%nSpec+1), priorVelocity%lower, priorVelocity%upper)
+				galaxy%synthGrad(:,library%nSpec+2) = galaxy%synthGrad(:,library%nSpec+2) * diffSigmoid(trial(library%nSpec+2), priorDispersion%lower, priorDispersion%upper)
 			endif
 		endif
 					
-! Total posterior and gradient, including the Jacobian
-		slhood = logLikelihood + logPrior + logJac
-		gradient = gradient + gradJac
+! Total posterior
+		slhood = logLikelihood + logPrior
 		
 ! Save the parameters that give the best likelihood
 		if (slhood > maxslhood) then

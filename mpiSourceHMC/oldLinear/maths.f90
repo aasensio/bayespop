@@ -1,52 +1,93 @@
 module maths	
 implicit none
 
+! Overloading the functions
+interface sigmoid
+  module procedure sigmoidVector, sigmoidScalar
+end interface
+
+interface invSigmoid
+  module procedure invsigmoidVector, invSigmoidScalar
+end interface
+
+interface diffSigmoid
+  module procedure diffSigmoidVector, diffSigmoidScalar
+end interface
+
 contains
 
 !-----------------------------------------------------------------------
 ! Return a sigmoid function
 !-----------------------------------------------------------------------
-	elemental function sigmoid(x, lower, upper) result(y)
-	real(kind=8), intent(in) :: x, lower, upper
-	real(kind=8) :: y
-		y = lower + (upper-lower) / (1.d0 + exp(-x))
-	end function sigmoid
+	function sigmoidVector(x, lower, upper)
+	real(kind=8) :: x(:), sigmoidVector(size(x)), lower, upper
+		sigmoidVector = lower + (upper-lower) / (1.d0 + exp(-x))
+	end function sigmoidVector
+	
+!-----------------------------------------------------------------------
+! Return a sigmoid function
+!-----------------------------------------------------------------------
+	function sigmoidScalar(x, lower, upper)
+	real(kind=8) :: x, sigmoidScalar, lower, upper
+		sigmoidScalar = lower + (upper-lower) / (1.d0 + exp(-x))
+	end function sigmoidScalar
+
+!-----------------------------------------------------------------------
+! Return the inverse of the sigmoid function
+!-----------------------------------------------------------------------
+	function invSigmoidVector(x, lower, upper)
+	real(kind=8) :: x(:), invsigmoidVector(size(x)), lower, upper
+		invSigmoidVector = log( (lower - x) / (x - upper) )
+	end function invSigmoidVector
 	
 !-----------------------------------------------------------------------
 ! Return the inverse of the sigmoid function
 !-----------------------------------------------------------------------
-	elemental function invSigmoid(x, lower, upper) result(y)
-	real(kind=8), intent(in) :: x, lower, upper
-	real(kind=8) :: y
-		y = log( (lower - x) / (x - upper) )
-	end function invSigmoid
-	
-!-----------------------------------------------------------------------
-! Return the derivative of the sigmoid function
-!-----------------------------------------------------------------------
-	elemental function diffSigmoid(x, lower, upper) result(y)
-	real(kind=8), intent(in) :: x, lower, upper
-	real(kind=8) :: y
-		y = (upper-lower) * exp(-x) / (1.d0+exp(-x))**2
-	end function diffSigmoid
-	
-!-----------------------------------------------------------------------
-! Return the derivative of the sigmoid function
-!-----------------------------------------------------------------------
-	elemental function lnJacSigmoid(x, lower, upper) result(y)
-	real(kind=8), intent(in) :: x, lower, upper
-	real(kind=8) :: y
-		y = log(upper-lower) - x - 2.d0 * log(1.d0 + exp(-x))
-	end function lnJacSigmoid
+	function invSigmoidScalar(x, lower, upper)
+	real(kind=8) :: x, invsigmoidScalar, lower, upper
+		invSigmoidScalar = log( (lower - x) / (x - upper) )
+	end function invSigmoidScalar
 
 !-----------------------------------------------------------------------
 ! Return the derivative of the sigmoid function
 !-----------------------------------------------------------------------
-	elemental function difflnJacSigmoid(x, lower, upper) result(y)
-	real(kind=8), intent(in) :: x, lower, upper
-	real(kind=8) :: y
-		y = -1.d0 + 2.d0 * exp(-x) / (1.0+exp(-x))
-	end function difflnJacSigmoid
+	function diffSigmoidVector(x, lower, upper)
+	real(kind=8) :: x(:), diffSigmoidVector(size(x)), lower, upper
+		diffSigmoidVector = (upper-lower) * exp(-x) / (1.d0+exp(-x))**2
+	end function diffSigmoidVector
+	
+!-----------------------------------------------------------------------
+! Return the derivative of the sigmoid function
+!-----------------------------------------------------------------------
+	function diffSigmoidScalar(x, lower, upper)
+	real(kind=8) :: x, diffSigmoidScalar, lower, upper
+		diffSigmoidScalar = (upper-lower) * exp(-x) / (1.d0+exp(-x))**2
+	end function diffSigmoidScalar
+
+! 	
+! !-----------------------------------------------------------------------
+! ! Return a sigmoid function
+! !-----------------------------------------------------------------------
+! 	function sigmoid(x)
+! 	real(kind=8) :: x, sigmoid
+! 		sigmoid = 1.5d0 / (1.d0 + exp(-x))
+! 	end function sigmoid
+! 
+! !-----------------------------------------------------------------------
+! ! Return the inverse of the sigmoid function
+! !-----------------------------------------------------------------------
+! 	function invSigmoid(x)
+! 	real(kind=8) :: x, invSigmoid
+! 		invSigmoid = -log( (1.5d0 - x) / x)
+! 	end function invSigmoid
+! 
+! !-----------------------------------------------------------------------
+! ! Return the derivative of the sigmoid function
+! !-----------------------------------------------------------------------
+! 	function diffSigmoid(x)
+! 	real(kind=8) :: x, diffSigmoid
+! 		diffSigmoid = 1.5d0 * exp(-x) / (1.d0+exp(-x))**2
+! 	end function diffSigmoid
 
 !-----------------------------------------------------------------------
 ! Convolution of a spectrum with a kernel. Use edge wrapping

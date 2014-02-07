@@ -1,6 +1,6 @@
 module like_m
 use params
-use maths, only : convolution, sigmoid, diffSigmoid
+use maths, only : convolution, sigmoid, diffSigmoid, lnJacSigmoid, difflnJacSigmoid
 implicit none
       
 contains
@@ -10,16 +10,16 @@ contains
 !-----------------------------------------------------------------------
 	subroutine slikelihoodNoNormalization(trial,slhood,gradient,maxLikelihood)
 	logical :: maxLikelihood
-	real(kind=8) :: trial(:), slhood, logPrior, logLikelihood, gradient(sdim), gradJac(sdim), lnJac
+	real(kind=8) :: trial(:), slhood, logPrior, logLikelihood, gradient(sdim), logJacGradient(sdim), logJac
 	real(kind=8) :: temp(sdim),dist,loclik, sigma, xi, L, maxDispersion, sumKernel, covar(sdim,sdim), sumKernel2
 	integer :: i,j, nPixKernel, midPix, activeWeight(library%nSpec)
 
 ! Take also into account the priors
 		logPrior = 0.d0
 		gradient = 0.d0
-		lnJac = 0.d0
-		gradJac = 0.d0
-								
+		logJac = 0.d0
+		logJacGradient = 0.d0
+		
 ! ********* Prior for the weights, including the Jacobian of the transformation and its gradient
 		logJac = sum(lnJacSigmoid(trial(1:library%nSpec), 0.d0, 1.d0))
 		logJacGradient(1:library%nSpec) = difflnJacSigmoid(trial(1:library%nSpec), 0.d0, 1.d0)		
@@ -69,7 +69,7 @@ contains
 ! If we fix the LOS velocity of each component, fill all the trialVelocity array with the same value
 !******************			
 ! ********* Prior for the velocity and their corresponding Jacobian for the change of variables
-			logJac = sum(lnJacSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper))
+			logJac = lnJacSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
 			logJacGradient(library%nSpec+1) = difflnJacSigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
 			galaxy%trialVelocity = sigmoid(trial(library%nSpec+1), priors(1)%lower, priors(1)%upper)
 
@@ -85,8 +85,8 @@ contains
 			endif
 			
 ! ********* Prior for the dispersion and their corresponding Jacobian for the change of variables
-			logJac = sum(lnJacSigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper))
-			logJacGradient(library%nSpec+2) = difflnJacSigmoid(trial(library%nSpec+2c), priors(2)%lower, priors(2)%upper)
+			logJac = lnJacSigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper)
+			logJacGradient(library%nSpec+2) = difflnJacSigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper)
 			galaxy%trialDispersion = sigmoid(trial(library%nSpec+2), priors(2)%lower, priors(2)%upper)
 					
 ! Gaussian prior
@@ -195,11 +195,11 @@ contains
 		deallocate(galaxy%yKernelDerivative)
 		
 ! Compute the log-likelihood
-		logLikelihood = -0.5d0 * sum( (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask,galaxy%whichComputing))**2 / galaxy%noise**2 )
+		logLikelihood = -0.5d0 * sum( (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask))**2 / galaxy%noise**2 )		
 		
 ! Derivative of the log-likelihood, obtained applying the chain rule
 		do i = 1, sdim			
-			gradient(i) = gradient(i) - sum( (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask,galaxy%whichComputing)) / galaxy%noise**2 &
+			gradient(i) = gradient(i) - sum( (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask)) / galaxy%noise**2 &
 				* galaxy%synthGrad(galaxy%mask,i) )
 		enddo
 				
@@ -232,13 +232,17 @@ contains
 					
 ! Total posterior and gradient, including the Jacobian
 		slhood = logLikelihood + logPrior + logJac
-		gradient = gradient + gradJac
+		gradient = gradient + logJacGradient
 		
 ! Save the parameters that give the best likelihood
 		if (slhood > maxslhood) then
 			map_pars = trial
 			maxslhood = slhood
  		endif
+ 		
+! We make use of these quantities later, so compensate for the scale
+ 		galaxy%trialDispersion = galaxy%trialDispersion * library%velScale
+		galaxy%trialVelocity = galaxy%trialVelocity * library%velScale
  		 		 		
 		return
 			

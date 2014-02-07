@@ -67,6 +67,12 @@ FOR i=0, nspec-1 DO BEGIN
     outspec[*,i] = spectrum_ln
 ENDFOR
 
+;****************************************
+; ARTIFICIALLY SET SEVERAL SPECTRA HERE TO DO SOME TESTS
+;****************************************
+nspec = 3
+outspec = transpose(replicate(1.d0,nspec)#outspec)
+
 ;# Cutting the data outside the LMIN, LMAX (with some margin to account for border effects in convolution)
 goodpix = where(lam_ln GE alog(datafile.lmin[0]-50.) AND lam_ln LE alog(datafile.lmax[0]+50.)) ; we leave a buffer of 50AA
 IF goodpix[0] EQ -1 THEN BEGIN

@@ -19,6 +19,11 @@ conffile = load_conffile(configuration_file)
 print, '- '+strcompress(string(conffile.nfiles),/re)+' case(s) found'
 print, ''
 
+IF NOT FILE_TEST('../preproc_data',/DIRECTORY) THEN FILE_MKDIR, '../preproc_data'
+
+openw,unitConf,'../preproc_data/fileList.dat',width=150, /get_lun
+
+printf,unitConf,conffile.nfiles
 ;## Looping on every case of the datafile ---------------
 FOR i=0, conffile.nfiles-1 DO BEGIN
 
@@ -53,12 +58,13 @@ FOR i=0, conffile.nfiles-1 DO BEGIN
 
     ;## Writing preprocessed data into a binary file
     print, '# Saving the necessary data to the preproc_data file'
-
-    IF NOT FILE_TEST('../preproc_data',/DIRECTORY) THEN FILE_MKDIR, '../preproc_data'
+    
     OPENW, unit, outfile, /F77_UNFORMATTED, /GET_LUN
     root = string(replicate(32B,100))
     strput, root, "results/test"
-    WRITEU, unit, root
+    
+    printf, unitConf, galaxy.nspec
+    printf, unitConf, strmid(outfile,16,strlen(outfile)-16-6)
 
       ; Prior's related parameters
       FOR j=0, 5 DO BEGIN
@@ -96,13 +102,16 @@ FOR i=0, conffile.nfiles-1 DO BEGIN
       WRITEU, unit, 1L*mask
       WRITEU, unit, 1L*galaxy.fix_losvd            
 
-   CLOSE, unit
-   stop
+   CLOSE, unit   
    FREE_LUN, unit
    print, ' '
    print, '# Preprocessed file '+outfile+' written on disk'
    print, ' '
+      
 
 ENDFOR
+
+close, unitConf
+free_lun, unitConf
 
 END
