@@ -5,5 +5,4 @@
 *.rand.txt
 *.diag.txt
 mcmc
-*.fits
 *.input
