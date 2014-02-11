@@ -1,7 +1,7 @@
 module geodesiclm_m
 use like_m, only : slikelihoodNoNormalization
 use maths, only : inverse
-use params, only : galaxy, covarianceLM, hessianLM
+use params, only : galaxy, covarianceLM, hessianLM, myrankStr, nItersLM
 
 	real(kind=8), allocatable :: xvar(:), fvec(:), fjac(:,:), dtd(:,:)
 	integer :: m, n, mode, niters, nfev, njev, naev, maxiters, maxfev, maxjev, converged, print_level, info
@@ -60,8 +60,8 @@ contains
 		xrtol = 1.d-18
 		frtol = 1.d-18
 		ftol = 1.d-15
-		print_level = 3
-		print_unit = 6
+		print_level = 1
+		print_unit = 35
 		imethod = 0
 		initial_factor = 0.1d0
 		factoraccept = 10
@@ -72,10 +72,12 @@ contains
 		
 		iaccel = 1
 	 	ibold = 1     ! Type of acceptance
+	 	
+	 	open(unit=35,file='temp/LM_'//trim(adjustl(myrankStr))//'.iterations',action='write',status='replace')
 		
 		call geolevmar(func, jacobian, Avv, xvar, fvec, fjac, n, m, callback, info,&
 					analytic_jac, analytic_Avv, center_diff, eps, h1, h2,&
-					dtd, mode, niters, nfev, njev, naev,&
+					dtd, mode, nItersLM, nfev, njev, naev,&
 					maxiters, maxfev, maxjev, maxaev, maxlam,&
 					artol, Cgoal, gtol, xtol, xrtol, ftol, frtol,&
 					converged, print_level, print_unit,&
@@ -83,6 +85,9 @@ contains
 					initial_factor, factoraccept, factorreject, avmax)
 					
 		x = xvar
+		close(35)
+		
+		nItersLM = nItersLM - 1
 		
 ! 		hessianLM = matmul( transpose(fjac), fjac)
 ! 		

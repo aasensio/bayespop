@@ -85,7 +85,7 @@ contains
 		fbInt = 10
 		maxStep = 100
 		resume = 0
-		flPfx = 'test'//trim(adjustl(myrankStr))
+		flPfx = 'temp/test'//trim(adjustl(myrankStr))
 		
 ! 		stepSize = stepSize / maxStep
 			
@@ -95,6 +95,10 @@ contains
 		open(unit=21,file= (trim(flPfx)//".spectra"),form='unformatted',action='write',access='stream')
 		write(20) nSamplesEstimationVariance
 		write(21) galaxy%nPix
+		
+! 		do i = 1, nSamplesEstimationVariance
+! 			call writeHMCProcess(sdim,st,1.d0,st)
+! 		enddo
 		
    		call run_guided_hmc(sdim, st, scaleFactor, maxStep, stepSize, flPfx(1:len_trim(flPfx)), seed, 0, &
    			fbInt, negLogPosterior, writeHMCProcess, 0, nSamplesEstimationVariance)
@@ -188,7 +192,7 @@ contains
 	endif
 		
 	write(20) savePars	
-	write(21) galaxy%synth
+	write(21) galaxy%synth	
 
 end subroutine writeHMCProcess
 

@@ -24,7 +24,7 @@ implicit none
 	
 	real(kind=8), allocatable :: st(:), stepSize(:), savePars(:), covarianceLM(:,:), hessianLM(:,:)
 	real(kind=8) :: scaleFactor
-	integer :: seed, fbInt, maxStep, resume
+	integer :: seed, fbInt, maxStep, resume, nItersLM
 	character(len=128) :: flPfx
 
 	real(kind=8), parameter :: lightSpeed_c = 299792.458d0

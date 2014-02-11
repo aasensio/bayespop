@@ -108,7 +108,7 @@ contains
 ! 			galaxy%trial(i) = sigmoid(galaxy%trial(i) + 1.d-5)
 ! 		enddo
 				
-		open(unit=15,file='bestFitPars'//trim(adjustl(myrankStr))//'.dat',action='write',status='replace')
+		open(unit=15,file='temp/bestFitPars'//trim(adjustl(myrankStr))//'.dat',action='write',status='replace')
   		if (galaxy%fixVLOS == 0) then
 			write(15,*) library%nSpec, library%nSpec, library%nSpec
 		else
@@ -118,7 +118,7 @@ contains
 			write(15,*) galaxy%trialWeight(i), galaxy%trialVelocity(i) * library%velScale, galaxy%trialDispersion(i) * library%velScale
 		enddo
 		close(15)
-		open(unit=15,file='bestFitSpec'//trim(adjustl(myrankStr))//'.dat',action='write',status='replace')
+		open(unit=15,file='temp/bestFitSpec'//trim(adjustl(myrankStr))//'.dat',action='write',status='replace')
 		write(15,*) size(galaxy%mask)
 		do i = 1, size(galaxy%mask)
 			write(15,*) galaxy%synth(galaxy%mask(i)), galaxy%spec(galaxy%mask(i))

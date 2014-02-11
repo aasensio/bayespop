@@ -3,7 +3,7 @@
 # Select compiler
 # Intel Fortran compiler
 COMPILER_F90 = mpif90
-OPTIONS_F90 = -c -heap-arrays 1600 -O3 
+OPTIONS_F90 = -c -heap-arrays 1600 -O3
 # -g -traceback
 # -O3
 # -g -traceback

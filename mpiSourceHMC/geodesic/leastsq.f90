@@ -582,6 +582,8 @@ SUBROUTINE geolevmar(func, jacobian, Avv, &
         WRITE(print_unit, *) "  istep, nfev, njev, naev, accepted", istep, nfev, njev, naev, accepted
         WRITE(print_unit, *) "  Cost, lam, delta", C, lam, delta
         WRITE(print_unit, *) "  av, cos alpha", av, cos_alpha
+     ELSEIF(print_level .EQ. 1) THEN
+		WRITE(print_unit, *) nfev, C
      ENDIF
      IF (print_level .EQ. 4 .AND. accepted .GT. 0) THEN
         WRITE(print_unit, *) "  istep, nfev, njev, naev, accepted", istep, nfev, njev, naev, accepted

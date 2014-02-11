@@ -207,20 +207,30 @@ contains
 		allocate(galaxy%trialWeight(library%nSpec))
 		allocate(galaxy%trialVelocity(library%nSpec))
 		allocate(galaxy%trialDispersion(library%nSpec))
-		allocate(galaxy%synth(galaxy%nPix))
+		allocate(galaxy%synth(nPix))
 		
 		call MPI_Recv(galaxy%trialWeight, library%nSpec, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, 24, MPI_COMM_WORLD, status, ierr)
 		call MPI_Recv(galaxy%trialVelocity, library%nSpec, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, 25, MPI_COMM_WORLD, status, ierr)
 		call MPI_Recv(galaxy%trialDispersion, library%nSpec, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, 26, MPI_COMM_WORLD, status, ierr)
 				
-		call MPI_Recv(galaxy%synth, galaxy%nPix, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, 27, MPI_COMM_WORLD, status, ierr)
-		
-		open(unit=12,file='output/'//trim(adjustl(fileCases(indCase)))//"_"//trim(adjustl(strGalaxy))//".MAP",form='unformatted',action='write',access='stream')		
-		write(12) library%nSpec, galaxy%nPix
+		call MPI_Recv(galaxy%synth, nPix, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, 27, MPI_COMM_WORLD, status, ierr)
+				
+		open(unit=12,file='output/'//trim(adjustl(fileCases(indCase)))//"_"//trim(adjustl(strGalaxy))//".MAP",form='unformatted',action='write',access='stream')
+		write(12) library%nSpec, nPix		
 		write(12) galaxy%trialWeight
 		write(12) galaxy%trialVelocity
 		write(12) galaxy%trialDispersion
 		write(12) galaxy%synth
+		close(12)
+		
+		call MPI_Recv(nItersLM, 1, MPI_INTEGER, MPI_ANY_SOURCE, 28, MPI_COMM_WORLD, status, ierr)
+		if (allocated(samples)) deallocate(samples)
+		allocate(samples(2,nItersLM))
+		
+		call MPI_Recv(samples, 2*nItersLM, MPI_DOUBLE_PRECISION, MPI_ANY_SOURCE, 29, MPI_COMM_WORLD, status, ierr)
+		open(unit=12,file='output/'//trim(adjustl(fileCases(indCase)))//"_"//trim(adjustl(strGalaxy))//".LM",form='unformatted',action='write',access='stream')
+		write(12) nItersLM
+		write(12) samples
 		close(12)
 						
 	end subroutine receiveNewResult
@@ -232,7 +242,7 @@ contains
 	integer :: slave, indCase, indGalaxy
 	logical :: computationOK
 	include 'mpif.h'
-	integer :: ierr, i, status(MPI_STATUS_SIZE)
+	integer :: ierr, i, status(MPI_STATUS_SIZE), j
 	integer :: nSamples, nPix
 	real(kind=8), allocatable :: samples(:,:), temp(:)
 	
@@ -242,7 +252,7 @@ contains
 		call MPI_Send(indGalaxy, 1, MPI_INTEGER, 0, 17, MPI_COMM_WORLD, ierr)
 		
 ! Send the samples for the parameters
-		flPfx = 'test'//trim(adjustl(myrankStr))
+		flPfx = 'temp/test'//trim(adjustl(myrankStr))
 		open(unit=20,file= (trim(flPfx)//".samples"),form='unformatted',action='read',access='stream')
 		read(20) nSamples
 		
@@ -281,25 +291,39 @@ contains
 		call MPI_Send(samples, galaxy%nPix*nSamples, MPI_DOUBLE_PRECISION, 0, 22, MPI_COMM_WORLD, ierr)
 		
 ! Best fit
-		open(unit=15,file='bestFitPars'//trim(adjustl(myrankStr))//'.dat',action='read',status='old')
+		open(unit=15,file='temp/bestFitPars'//trim(adjustl(myrankStr))//'.dat',action='read',status='old')
   		do i = 1, library%nSpec
 			read(15,*) galaxy%trialWeight(i), galaxy%trialVelocity(i), galaxy%trialDispersion(i)
 		enddo
-		close(15)
+		close(15, status="delete")
 		
 		call MPI_Send(library%nSpec, 1, MPI_INTEGER, 0, 23, MPI_COMM_WORLD, ierr)		
 		call MPI_Send(galaxy%trialWeight, library%nSpec, MPI_DOUBLE_PRECISION, 0, 24, MPI_COMM_WORLD, ierr)
 		call MPI_Send(galaxy%trialVelocity, library%nSpec, MPI_DOUBLE_PRECISION, 0, 25, MPI_COMM_WORLD, ierr)
 		call MPI_Send(galaxy%trialDispersion, library%nSpec, MPI_DOUBLE_PRECISION, 0, 26, MPI_COMM_WORLD, ierr)
 		
-		open(unit=15,file='bestFitSpec'//trim(adjustl(myrankStr))//'.dat',action='read',status='old')
+		open(unit=15,file='temp/bestFitSpec'//trim(adjustl(myrankStr))//'.dat',action='read',status='old')
 		read(15,*) nPix
 		do i = 1, nPix
 			read(15,*) galaxy%synth(i)
 		enddo
-		close(15)
+		close(15, status="delete")
 		
 		call MPI_Send(galaxy%synth, galaxy%nPix, MPI_DOUBLE_PRECISION, 0, 27, MPI_COMM_WORLD, ierr)
+		
+		if (allocated(samples)) deallocate(samples)
+		allocate(samples(2,nItersLM))
+		call MPI_Send(nItersLM, 1, MPI_INTEGER, 0, 28, MPI_COMM_WORLD, ierr)
+		
+		open(unit=15,file='temp/LM_'//trim(adjustl(myrankStr))//'.iterations',action='read',status='old')
+		do i = 1, 7
+			read(15,*)
+		enddo
+		do i = 1, nItersLM
+			read(15,*) (samples(j,i),j=1,2)			
+		enddo
+		call MPI_Send(samples, 2*nItersLM, MPI_DOUBLE_PRECISION, 0, 29, MPI_COMM_WORLD, ierr)
+		close(15, status="delete")
 				
 	end subroutine sendNewResult
 

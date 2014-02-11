@@ -1,0 +1,21 @@
+Number of nodes:   3
+121145.622 MASTER -> SLAVE     1 --- Galaxy     1 /    9
+121145.622 MASTER -> SLAVE     2 --- Galaxy     2 /    9
+121145.622 SLAVE     2 -> MASTER --- Finished     3 /    9
+121149.765 MASTER -> SLAVE     2 --- Galaxy     3 /    9
+121149.765 SLAVE     1 -> MASTER --- Finished     4 /    9
+121149.836 MASTER -> SLAVE     1 --- Galaxy     4 /    9
+121149.836 SLAVE     2 -> MASTER --- Finished     5 /    9
+121153.722 MASTER -> SLAVE     2 --- Galaxy     5 /    9
+121153.722 SLAVE     1 -> MASTER --- Finished     6 /    9
+121157.889 MASTER -> SLAVE     1 --- Galaxy     6 /    9
+121157.889 SLAVE     2 -> MASTER --- Finished     7 /    9
+121201.842 MASTER -> SLAVE     2 --- Galaxy     7 /    9
+121201.842 SLAVE     1 -> MASTER --- Finished     8 /    9
+121206.192 MASTER -> SLAVE     1 --- Galaxy     8 /    9
+121206.192 SLAVE     2 -> MASTER --- Finished     9 /    9
+121209.217 MASTER -> SLAVE     2 --- Galaxy     9 /    9
+121209.217 SLAVE     1 -> MASTER --- Finished    10 /    9
+121213.740 MASTER -> SLAVE     1 --- Killed
+121213.740 SLAVE     2 -> MASTER --- Finished    10 /    9
+121215.697 MASTER -> SLAVE     2 --- Killed

@@ -24,8 +24,10 @@ implicit none
 	call MPI_COMM_SIZE(MPI_COMM_WORLD, nprocs, mpi_status)
 
 	if (myrank == 0) then		
+		open(unit=29,file='output/computation.process',action='write',status='replace')		
 		write(*,FMT='(A,I3)') 'Number of nodes: ', nprocs
 		write(*,FMT='(A,I3,A,I3,A)') 'Node ', myrank, '/', nprocs, ' - MASTER'
+		write(29,FMT='(A,I3)') 'Number of nodes: ', nprocs		
 	else	
 		write(*,FMT='(A,I3,A,I3,A)') 'Node ', myrank, '/', nprocs, ' - SLAVE'
 		write(myrankStr,FMT='(I4)') myrank		
@@ -87,6 +89,7 @@ implicit none
 				call sendNewTask(slave, loop, whichCase(loop), whichGalaxy(loop))
 				call date_and_time(date, time, zone, values)
 				write(*,FMT='(A10,A,I5,A,I5,A,I5)') time, ' MASTER -> SLAVE ', slave, ' --- Galaxy ', loop,' /', sum(nGalaxies)
+				write(29,FMT='(A10,A,I5,A,I5,A,I5)') time, ' MASTER -> SLAVE ', slave, ' --- Galaxy ', loop,' /', sum(nGalaxies)
 			enddo
 			
 		endif
@@ -103,6 +106,8 @@ implicit none
 
 ! Receive new result and save it				
 				call receiveNewResult(slave, computationOK, indCase, indGalaxy)
+				write(*,FMT='(A10,A,I5,A,I5,A,I5)') time, ' SLAVE ', slave,' -> MASTER --- Finished ', loop,' /', sum(nGalaxies)
+				write(29,FMT='(A10,A,I5,A,I5,A,I5)') time, ' SLAVE ', slave,' -> MASTER --- Finished ', loop,' /', sum(nGalaxies)
 								
 ! New computation
 				if (loop <= sum(nGalaxies)) then					
@@ -110,6 +115,7 @@ implicit none
 					call sendNewTask(slave, loop, whichCase(loop), whichGalaxy(loop))					
 					call date_and_time(date, time, zone, values)
 					write(*,FMT='(A10,A,I5,A,I5,A,I5)') time, ' MASTER -> SLAVE ', slave, ' --- Galaxy ', loop,' /', sum(nGalaxies)
+					write(29,FMT='(A10,A,I5,A,I5,A,I5)') time, ' MASTER -> SLAVE ', slave, ' --- Galaxy ', loop,' /', sum(nGalaxies)
 					loop = loop + 1
 				else					
 					call killSlave(slave)
@@ -119,6 +125,7 @@ implicit none
 					endif
 					call date_and_time(date, time, zone, values)
 					write(*,FMT='(A10,A,I5,A)') time, ' MASTER -> SLAVE ', slave, ' --- Killed'
+					write(29,FMT='(A10,A,I5,A)') time, ' MASTER -> SLAVE ', slave, ' --- Killed'
 				endif
 			endif
 
@@ -134,12 +141,11 @@ implicit none
 
 ! Do the computation					
 					call getMaximumLikelihood
- 					call hmcSample
+  					call hmcSample
 															
 					call sendNewResult(myrank, .TRUE., indCase, indGalaxy)
 					
 					call date_and_time(date, time, zone, values)
-					write(*,FMT='(A10,A,I5,A,I5,A,I5)') time, ' SLAVE ', myrank,' -> MASTER --- Finished ', loop,' /', sum(nGalaxies)
 				endif
 				
 			endif
