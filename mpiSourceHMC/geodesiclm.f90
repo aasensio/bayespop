@@ -1,6 +1,7 @@
 module geodesiclm_m
 use like_m, only : slikelihoodNoNormalization
-use params, only : galaxy, covarianceLM
+use maths, only : inverse
+use params, only : galaxy, covarianceLM, hessianLM
 
 	real(kind=8), allocatable :: xvar(:), fvec(:), fjac(:,:), dtd(:,:)
 	integer :: m, n, mode, niters, nfev, njev, naev, maxiters, maxfev, maxjev, converged, print_level, info
@@ -26,8 +27,9 @@ contains
 		if (allocated(fjac)) deallocate(fjac)
 		if (allocated(dtd)) deallocate(dtd)
 		if (allocated(covarianceLM)) deallocate(covarianceLM)
+		if (allocated(hessianLM)) deallocate(hessianLM)
 		
-		allocate(xvar(n), fvec(M), fjac(M,N), dtd(n,n), covarianceLM(n,n))
+		allocate(xvar(n), fvec(M), fjac(M,N), dtd(n,n), covarianceLM(n,n), hessianLM(N,N))
 		
 		dtd = 0.d0
 		do i = 1, n
@@ -82,8 +84,17 @@ contains
 					
 		x = xvar
 		
-		covarianceLM = matmul( transpose(fjac), fjac)
-				
+! 		hessianLM = matmul( transpose(fjac), fjac)
+! 		
+! 		call inverse(hessianLM, covarianceLM, N)
+! 		
+! 		do i = 1, n
+! 			print *, covarianceLM(i,i)
+! 		enddo
+! 		stop
+! 		
+		
+						
 	end subroutine maximumLikelihoodGeodesicLM
 
 !-----------------------------------------------------------------------

@@ -22,7 +22,7 @@ implicit none
       	
 !=======================================================================
 	
-	real(kind=8), allocatable :: st(:), stepSize(:), savePars(:), covarianceLM(:,:)
+	real(kind=8), allocatable :: st(:), stepSize(:), savePars(:), covarianceLM(:,:), hessianLM(:,:)
 	real(kind=8) :: scaleFactor
 	integer :: seed, fbInt, maxStep, resume
 	character(len=128) :: flPfx

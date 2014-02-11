@@ -24,7 +24,7 @@ contains
 		logJac = sum(lnJacSigmoid(trial(1:library%nSpec), 0.d0, 1.d0))
 		logJacGradient(1:library%nSpec) = difflnJacSigmoid(trial(1:library%nSpec), 0.d0, 1.d0)		
 		galaxy%trialWeight = sigmoid(trial(1:library%nSpec), 0.d0, 1.d0)
-				
+		
 
 !******************
 ! If we do not fix the LOS velocity of each component

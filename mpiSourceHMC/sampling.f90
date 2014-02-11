@@ -79,7 +79,7 @@ contains
 			stepSize(library%nSpec+1) = 0.01d0
 			stepSize(library%nSpec+2) = 0.01d0
 		endif
-							
+									
 		scaleFactor = 1.d0
  		seed = 1234
 		fbInt = 10
