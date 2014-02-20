@@ -254,12 +254,12 @@ contains
 ! Send the samples for the parameters
 		flPfx = 'temp/test'//trim(adjustl(myrankStr))
 		open(unit=20,file= (trim(flPfx)//".samples"),form='unformatted',action='read',access='stream')
-		read(20) nSamples
+		read(20) nSamples, library%nSpec
 		
 		if (allocated(samples)) deallocate(samples)
 		if (allocated(temp)) deallocate(temp)
-		allocate(samples(sdim,nSamples))
-		allocate(temp(sdim))
+		allocate(samples(3*library%nSpec,nSamples))
+		allocate(temp(3*library%nSpec))
 		
 		do i = 1, nSamples
 			read(20) temp
@@ -268,8 +268,8 @@ contains
 		close(20, status="delete")
 				
 		call MPI_Send(nSamples, 1, MPI_INTEGER, 0, 18, MPI_COMM_WORLD, ierr)
-		call MPI_Send(sdim, 1, MPI_INTEGER, 0, 19, MPI_COMM_WORLD, ierr)
-		call MPI_Send(samples, sdim*nSamples, MPI_DOUBLE_PRECISION, 0, 20, MPI_COMM_WORLD, ierr)
+		call MPI_Send(library%nSpec, 1, MPI_INTEGER, 0, 19, MPI_COMM_WORLD, ierr)
+		call MPI_Send(samples, 3*library%nSpec*nSamples, MPI_DOUBLE_PRECISION, 0, 20, MPI_COMM_WORLD, ierr)
 						
 		nPix = galaxy%nPix
 		

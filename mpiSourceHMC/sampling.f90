@@ -50,7 +50,7 @@ contains
 		enddo
 				
 ! Estimate noise level : sigma = <spec> / SNR		
-		galaxy%noise = (sum(galaxy%spec(galaxy%mask)) / galaxy%nMask) / galaxy%snr		
+		galaxy%noise = (sum(galaxy%spec(galaxy%mask)) / galaxy%nMask) / galaxy%snr
 		
 ! Initial parameters
 		if (allocated(st)) deallocate(st)
@@ -59,7 +59,7 @@ contains
 		
 		allocate(st(sdim))
 		allocate(stepSize(sdim))
-		allocate(savePars(sdim))
+		allocate(savePars(3*library%nSpec))
 
 ! Initial values obtained with a optimization routine
 ! These values are obtained 
@@ -93,7 +93,7 @@ contains
 		nSamplesEstimationVariance = 200
 		open(unit=20,file= (trim(flPfx)//".samples"),form='unformatted',action='write',access='stream')
 		open(unit=21,file= (trim(flPfx)//".spectra"),form='unformatted',action='write',access='stream')
-		write(20) nSamplesEstimationVariance
+		write(20) nSamplesEstimationVariance, 3*library%nSpec
 		write(21) galaxy%nPix
 		
 ! 		do i = 1, nSamplesEstimationVariance
@@ -172,24 +172,14 @@ contains
 		savePars(loop) = galaxy%trialWeight(i)		
 		loop = loop + 1
 	enddo
-	if (galaxy%fixVLOS == 0) then
-		do i = 1, library%nSpec
-			savePars(loop) = galaxy%trialVelocity(i)
-			loop = loop + 1
-		enddo
-	else
-		savePars(loop) = galaxy%trialVelocity(1)
+	do i = 1, library%nSpec
+		savePars(loop) = galaxy%trialVelocity(i)
 		loop = loop + 1
-	endif
-	if (galaxy%fixVLOS == 0) then
-		do i = 1, library%nSpec
-			savePars(loop) = galaxy%trialDispersion(i)
-			loop = loop + 1
-		enddo
-	else
-		savePars(loop) = galaxy%trialDispersion(1)
+	enddo
+	do i = 1, library%nSpec
+		savePars(loop) = galaxy%trialDispersion(i)
 		loop = loop + 1
-	endif
+	enddo
 		
 	write(20) savePars	
 	write(21) galaxy%synth	

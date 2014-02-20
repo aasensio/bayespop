@@ -155,21 +155,6 @@ implicit none
 	
 	endif
 
-! 	call setProblem
-	
-
-!	do galaxy%whichComputing = 1, galaxy%nSpec
-! 		galaxy%whichComputing = 1
-	
-
-! Find the maximum a-posteriori values
-!   		call getMaximumLikelihood
-
-! Hamiltonian Metropolis
-! 		call hmcSample
-		
-!	enddo
-
 ! Finalize MPI
 	call MPI_FINALIZE(mpi_status)
    

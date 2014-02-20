@@ -6,3 +6,7 @@
 *.diag.txt
 mcmc
 *.input
+*.LM
+*.synth
+*.MAP
+*.samples
