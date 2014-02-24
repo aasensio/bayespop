@@ -243,7 +243,7 @@ contains
 	logical :: computationOK
 	include 'mpif.h'
 	integer :: ierr, i, status(MPI_STATUS_SIZE), j
-	integer :: nSamples, nPix
+	integer :: nSamples, nPix, nPars
 	real(kind=8), allocatable :: samples(:,:), temp(:)
 	
 		call MPI_Send(slave, 1, MPI_INTEGER, 0, 14, MPI_COMM_WORLD, ierr)
@@ -254,12 +254,12 @@ contains
 ! Send the samples for the parameters
 		flPfx = 'temp/test'//trim(adjustl(myrankStr))
 		open(unit=20,file= (trim(flPfx)//".samples"),form='unformatted',action='read',access='stream')
-		read(20) nSamples, library%nSpec
+		read(20) nSamples, nPars
 		
 		if (allocated(samples)) deallocate(samples)
 		if (allocated(temp)) deallocate(temp)
-		allocate(samples(3*library%nSpec,nSamples))
-		allocate(temp(3*library%nSpec))
+		allocate(samples(nPars,nSamples))
+		allocate(temp(nPars))
 		
 		do i = 1, nSamples
 			read(20) temp
@@ -268,7 +268,7 @@ contains
 		close(20, status="delete")
 				
 		call MPI_Send(nSamples, 1, MPI_INTEGER, 0, 18, MPI_COMM_WORLD, ierr)
-		call MPI_Send(library%nSpec, 1, MPI_INTEGER, 0, 19, MPI_COMM_WORLD, ierr)
+		call MPI_Send(nPars, 1, MPI_INTEGER, 0, 19, MPI_COMM_WORLD, ierr)
 		call MPI_Send(samples, 3*library%nSpec*nSamples, MPI_DOUBLE_PRECISION, 0, 20, MPI_COMM_WORLD, ierr)
 						
 		nPix = galaxy%nPix

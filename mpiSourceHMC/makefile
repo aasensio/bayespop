@@ -28,7 +28,7 @@ LAPACK_LIB = /scratch/LIBS/lapack-3.2
 #COMPILER = gfortran
 #OPTIONS = -c -frecord-marker=4 -ffree-form
 
-LIBS=-L$(HMC_LIB) -lhmc -L$(GEODESIC_LIB) -lgeodesic -L$(BLAS_LIB) -L$(LAPACK_LIB) -llapack_LINUX -lblas_LINUX
+LIBS=-L$(HMC_LIB) -lhmc -L$(GEODESIC_LIB) -lgeodesic -L$(BLAS_LIB) -L$(LAPACK_LIB) -llapack -lblas
 
 .SUFFIXES: .f .o
 
