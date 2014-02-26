@@ -1,6 +1,6 @@
 module like_m
 use params
-use maths, only : convolution, sigmoid, diffSigmoid, lnJacSigmoid, difflnJacSigmoid
+use maths, only : convolution, sigmoid, diffSigmoid, lnJacSigmoid, difflnJacSigmoid, convolutionVectorized
 implicit none
       
 contains
@@ -11,8 +11,8 @@ contains
 	subroutine slikelihoodNoNormalization(trial,slhood,gradient,maxLikelihood)
 	logical :: maxLikelihood
 	real(kind=8) :: trial(:), slhood, logPrior, logLikelihood, gradient(sdim), logJacGradient(sdim), logJac
-	real(kind=8) :: temp(sdim),dist,loclik, sigma, xi, L, maxDispersion, sumKernel, covar(sdim,sdim), sumKernel2
-	integer :: i,j, nPixKernel, midPix, activeWeight(library%nSpec)
+	real(kind=8) :: temp(sdim),dist,loclik, sigma, xi, L, sumKernel, covar(sdim,sdim), sumKernel2
+	integer :: i,j, activeWeight(library%nSpec)
 
 ! Take also into account the priors
 		logPrior = 0.d0
@@ -122,32 +122,19 @@ contains
 ! Normalize the velocity and dispersion to a global scale
 		galaxy%trialDispersion = galaxy%trialDispersion / library%velScale
 		galaxy%trialVelocity = galaxy%trialVelocity / library%velScale
-
-		maxDispersion = maxval(galaxy%trialDispersion)
-
-! Find the number of pixels of the kernel
-		nPixKernel = 2*ceiling(4*maxDispersion)+1
-
-! Do something more efficient that allocating memory for each iteration
-		allocate(galaxy%xKernel(nPixKernel))
-		allocate(galaxy%yKernel(nPixKernel))		
-		allocate(galaxy%yKernelDerivative(nPixKernel))
-		
+				
 		galaxy%synth = 0.d0		
-		galaxy%synthGrad = 0.d0
-		midPix = nPixKernel / 2
+		galaxy%synthGrad = 0.d0		
 		
 ! Compute the kernel, do the convolution, add the component and compute the derivatives
 		do i = 1, library%nSpec
 
-			if (activeWeight(i) == 1) then
-				do j = 1, nPixKernel
-					galaxy%xKernel(j) = (j-1 - (midPix+galaxy%trialVelocity(i))) / galaxy%trialDispersion(i)
-				enddo
+			if (activeWeight(i) == 1) then				
+				galaxy%xKernel = (indexArrayConvolution-1- (midPix+galaxy%trialVelocity(i))) / galaxy%trialDispersion(i)
 				galaxy%yKernel = exp(-0.5d0*galaxy%xKernel**2)
 				sumKernel = sum(galaxy%yKernel)				
 
-				galaxy%convolvedSpectrum = convolution(library%specAdapted(:,i), galaxy%yKernel / sumKernel)
+				galaxy%convolvedSpectrum = convolutionVectorized(library%specAdapted(:,i), galaxy%yKernel / sumKernel)
 				galaxy%synth = galaxy%synth + activeWeight(i) * galaxy%trialWeight(i) * galaxy%convolvedSpectrum
 												
 
@@ -161,14 +148,14 @@ contains
 						sum(-galaxy%xKernel / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
 
 					galaxy%synthGrad(:,i+library%nSpec) = activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
+						convolutionVectorized(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
 
 ! Term used to compute the derivatives with respect to the dispersion
 					galaxy%yKernelDerivative = (galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel * sumKernel - galaxy%yKernel * &
 						sum(galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
 
 					galaxy%synthGrad(:,i+2*library%nSpec) = activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
+						convolutionVectorized(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
 																
 				else
 ! Compute the derivative of the kernel 
@@ -176,24 +163,20 @@ contains
 						sum(-galaxy%xKernel / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
 							
 					galaxy%synthGrad(:,1+library%nSpec) = galaxy%synthGrad(:,1+library%nSpec) + activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
+						convolutionVectorized(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
 
 ! Term used to compute the derivatives with respect to the dispersion
 					galaxy%yKernelDerivative = (galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel * sumKernel - galaxy%yKernel * &
 						sum(galaxy%xKernel**2 / galaxy%trialDispersion(i) * galaxy%yKernel)) / sumKernel**2
 					
 					galaxy%synthGrad(:,2+library%nSpec) = galaxy%synthGrad(:,2+library%nSpec) + activeWeight(i) * galaxy%trialWeight(i) * &
-						convolution(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
+						convolutionVectorized(library%specAdapted(:,i), galaxy%yKernelDerivative ) / library%velScale
 				endif
 												
 			endif
 			
 		enddo
-							
-		deallocate(galaxy%xKernel)
-		deallocate(galaxy%yKernel)
-		deallocate(galaxy%yKernelDerivative)
-		
+									
 ! Compute the log-likelihood
 		logLikelihood = -0.5d0 * sum( (galaxy%synth(galaxy%mask)-galaxy%spec(galaxy%mask))**2 / galaxy%noise**2 )		
 		

@@ -1,4 +1,5 @@
-module maths	
+module maths
+use params, only : indexArrayConvolutionCentral
 implicit none
 
 contains
@@ -69,6 +70,24 @@ contains
 		enddo
 
 	end function convolution
+	
+!-----------------------------------------------------------------------
+! Convolution of a spectrum with a kernel. Use edge wrapping
+!-----------------------------------------------------------------------
+	function convolutionVectorized(spec, kernel)
+	real(kind=8) :: spec(:), kernel(:), convolutionVectorized(size(spec))
+	integer :: i, j, nSpec, nKernel, k
+		nSpec = size(spec)
+		nKernel = size(kernel)
+
+		convolutionVectorized = 0.d0
+
+		do i = 1, nSpec									
+			convolutionVectorized(i) = convolutionVectorized(i) + sum(spec(mod(i+indexArrayConvolutionCentral, nSpec)) * kernel)
+		enddo
+
+	end function convolutionVectorized
+
 
 !-------------------------------------------------------------
 ! Initialize the random number generator

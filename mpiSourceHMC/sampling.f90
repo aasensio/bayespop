@@ -60,7 +60,7 @@ contains
 		allocate(st(sdim))
 		allocate(stepSize(sdim))
 		allocate(savePars(3*library%nSpec))
-
+		
 ! Initial values obtained with a optimization routine
 ! These values are obtained 
 		st = galaxy%trial

@@ -35,6 +35,29 @@ contains
 ! Estimate noise level : sigma = <spec> / SNR
 		galaxy%noise = (sum(galaxy%spec(galaxy%mask)) / galaxy%nMask) / galaxy%snr
 		
+! Find the number of pixels of the kernel and allocate memory for the kernels
+		nPixKernel = 2*ceiling(4*priors(2)%upper / library%velScale)+1
+		midPix = nPixKernel / 2
+
+		if (associated(galaxy%xKernel)) deallocate(galaxy%xKernel)
+		if (associated(galaxy%yKernel)) deallocate(galaxy%yKernel)
+		if (associated(galaxy%yKernelDerivative)) deallocate(galaxy%yKernelDerivative)
+		if (allocated(indexArrayConvolution)) deallocate(indexArrayConvolution)
+		if (allocated(indexArrayConvolutionCentral)) deallocate(indexArrayConvolutionCentral)
+		
+		allocate(galaxy%xKernel(nPixKernel))
+		allocate(galaxy%yKernel(nPixKernel))		
+		allocate(galaxy%yKernelDerivative(nPixKernel))
+		allocate(indexArrayConvolutionCentral(nPixKernel))
+		allocate(indexArrayConvolution(nPixKernel))				
+		
+! Generate an array with the indices of the kernel array for the vectorized convolution
+		do i = 1, nPixKernel
+			indexArrayConvolutionCentral(i) = i-nPixKernel/2-1
+			indexArrayConvolution(i) = i
+		enddo
+
+		
 		if (allocated(x)) deallocate(x)
 		if (allocated(l)) deallocate(l)
 		if (allocated(u)) deallocate(u)

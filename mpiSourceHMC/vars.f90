@@ -86,5 +86,8 @@ implicit none
 	integer, allocatable :: nGalaxies(:), whichCase(:), whichGalaxy(:)
 	character(len=120), allocatable :: fileCases(:)
 	character(len=4) :: myrankStr
+	
+	integer, allocatable :: indexArrayConvolution(:), indexArrayConvolutionCentral(:)
+	integer :: nPixKernel, midPix
 
 end module params
